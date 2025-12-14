@@ -4,6 +4,7 @@ from typing import TypedDict
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langgraph.graph import StateGraph, END
 import os
 from dotenv import load_dotenv
 
@@ -51,6 +52,8 @@ class CVState(TypedDict, total=False):
     user_required_skills: list[str]
     user_optional_skills: list[str]
     match_score: int
+    category: str
+    explanation: str
 
 # -------------------------------
 # LLM konfiguráció
@@ -129,32 +132,94 @@ def cv_user_optional_skills_node(state: CVState) -> CVState:
 # -------------------------------
 # Score számítás
 # -------------------------------
-def calculate_score(required_done, optional_done):
+def calculate_score_node(state: CVState) -> CVState:
+    required_done = state["user_required_skills"]
+    optional_done = state["user_optional_skills"]
     req_score = len(required_done) / len(required_skills_list) * 70 if required_skills_list else 0
     opt_score = len(optional_done) / len(optional_skills_list) * 30 if optional_skills_list else 0
-    return round(req_score + opt_score)
+    return {"match_score": round(req_score + opt_score)}
+
+# -------------------------------
+# Router
+# -------------------------------
+
+# Itt megvalósul a feladatban megadott routing, ezek esetleg kategóriák alapján másfajta indoklásokat adhatnának? (egyelőre placeholder)
+def passed_node(state: CVState):
+    return {"explanation": "alkalmas"}
+
+def maybe_passed_node(state: CVState):
+    return {"explanation": "talán"}
+
+def not_passed_node(state: CVState):
+    return {"explanation": "nem alkalmas"}
+
+# Simán a pontszám alapján besorolja a kategóriákat
+def score_router_node(state: CVState):
+    score = state["match_score"]
+
+    if score >= 80:
+        return {"category": "alkalmas"}
+    elif 79 >= score >= 50:
+        return {"category": "talán"}
+    elif 49 >= score:
+        return {"category": "nem alkalmas"}
+
+def score_router_decision_condition(state: CVState):
+    return state["category"]
 
 # -------------------------------
 # Fő pipeline
 # -------------------------------
-state: CVState = {"cv_text": text}
+workflow = StateGraph(CVState)
 
-# 1. Kinyerjük a CV skill-eket
-parsed = cv_parser_node(state)
-state.update(parsed)
-extracted_skills = parsed.get("extracted_skills", [])
+# Node-ok hozzáadása
+workflow.add_node("cv_parser_node", cv_parser_node)
+workflow.add_node("cv_user_required_skills_node", cv_user_required_skills_node)
+workflow.add_node("cv_user_optional_skills_node", cv_user_optional_skills_node)
+workflow.add_node("calculate_score_node", calculate_score_node)
+workflow.add_node("score_router_node", score_router_node)
+workflow.add_node("passed_node", passed_node)
+workflow.add_node("maybe_passed_node", maybe_passed_node)
+workflow.add_node("not_passed_node", not_passed_node)
 
-# 2. Kötelező és opcionális skill-ek teljesítése
-required_done = cv_user_required_skills_node(state).get("user_required_skills", [])
-optional_done = cv_user_optional_skills_node(state).get("user_optional_skills", [])
+# Node struktúra felépítése
+workflow.set_entry_point("cv_parser_node")
+workflow.add_edge("cv_parser_node", "cv_user_required_skills_node")
+workflow.add_edge("cv_user_required_skills_node", "cv_user_optional_skills_node")
+workflow.add_edge("cv_user_optional_skills_node", "calculate_score_node")
+workflow.add_edge("calculate_score_node", "score_router_node")
 
-# 3. Match score
-score = calculate_score(required_done, optional_done)
+# Kategória alapján beroute-ol a megfelelő node-ba
+workflow.add_conditional_edges(
+    "score_router_node",
+    score_router_decision_condition,
+    {
+        "alkalmas": "passed_node",
+        "talán": "maybe_passed_node",
+        "nem alkalmas": "not_passed_node",
+    },
+)
+
+workflow.add_edge("passed_node", END)
+workflow.add_edge("maybe_passed_node", END)
+workflow.add_edge("not_passed_node", END)
+
+
+built_graph = workflow.compile()
 
 # -------------------------------
 # Eredmények kiírása
 # -------------------------------
-print("CV-ből kinyert skill-ek:", extracted_skills)
-print("Teljesített kötelező skill-ek:", required_done)
-print("Teljesített opcionális skill-ek:", optional_done)
-print("Match score:", score)
+initial_state = {
+    "cv_text": text  # a PDF-ből kiolvasott CV szöveg
+}
+
+print("Workflow indítása...")
+final_state = built_graph.invoke(initial_state)
+
+print("CV-ből kinyert skill-ek:", final_state.get("extracted_skills"))
+print("Teljesített kötelező skill-ek:", final_state.get("user_required_skills"))
+print("Teljesített opcionális skill-ek:", final_state.get("user_optional_skills"))
+print("Match score:", final_state.get("match_score"))
+print("Besorolás:", final_state.get("category"))
+print("Indoklás:", final_state.get("explanation"))
