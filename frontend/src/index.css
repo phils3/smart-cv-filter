@@ -1,0 +1,37 @@
+
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  width: 100vw;
+ /*  min-height: 100vh; */
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.border_div{
+  position: relative;
+  display: inline-flex;
+  border-radius: 30px;
+}
+.border_div::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 30px;
+  pointer-events: none;
+  border: 1px solid #999A9A;
+  transform: scale(1);
+  transform-origin: center;
+  transition: transform 180ms ease;
+  z-index: 1;
+}
+.border_div:hover::before{
+  transform: scale(1.4);
+  opacity: 0.3;
+  transition: all 180ms ease;
+}
+.border_div > .no-scale{
+  position: relative;
+  z-index: 2;
+  transform-origin: center;
+}
