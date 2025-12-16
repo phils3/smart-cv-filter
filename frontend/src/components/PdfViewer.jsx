@@ -17,7 +17,12 @@ export default function PdfViewer({ file, maxPages = 2 }) {
     if (!file) {
       const msg = document.createElement("div");
       msg.style.color = "#CFC6C6";
-      msg.textContent = "Nincs megjelenítendő PDF.";
+      msg.textContent = "Nincs megjelenítendő PDF";
+       // középre igazítás mindkét irányban
+      msg.style.display = "flex";
+      msg.style.alignItems = "center";      // vertikális középre
+      msg.style.justifyContent = "center";  // horizontális középre
+      msg.style.height = "100%";            // szülő magasságát vegye
       container.appendChild(msg);
       return;
     }

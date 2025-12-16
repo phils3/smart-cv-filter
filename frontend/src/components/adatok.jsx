@@ -9,8 +9,10 @@ export function AdatokProvider({ children }) {
     completedRequirements: [],
   })
   const [fileName, setFileName] = useState('');
+  const [how_it_works_visible, set_how_it_works_visible] = useState(false);
+  const [appHeight, setAppHeight] = useState('100vh');
   return (
-    <AdatokContext.Provider value={{ adatok, setAdatok, fileName, setFileName }}>
+    <AdatokContext.Provider value={{ adatok, setAdatok, fileName, setFileName, how_it_works_visible, set_how_it_works_visible, appHeight, setAppHeight }}>
       {children}
     </AdatokContext.Provider>
   )

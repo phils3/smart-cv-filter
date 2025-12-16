@@ -5,7 +5,7 @@ import { useAdatok } from './adatok';
 export default function UploadCvButton({ onFileSelected }) {
   const inputRef = useRef(null);
   const [error, setError] = useState('');
-  /* const [fileName, setFileName] = useState(''); */
+  
   
   const { setFileName } = useAdatok()
  
@@ -66,7 +66,7 @@ export default function UploadCvButton({ onFileSelected }) {
         style={{ display: 'none' }}
       />
 
-      {/* {fileName && <div style={{ marginTop: 8, color: '#CFC6C6' }}>{fileName}</div>} */}
+      
       {error && <div style={{ color: '#ff6b6b', marginTop: 6, fontSize: 13 }}>{error}</div>}
 
      

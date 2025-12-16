@@ -9,8 +9,8 @@ export default function Hatter() {
                 position: 'absolute',
                 left: '50%',
                 top: '50%',
-                width: '200vmax',         // very large so rotation always spans corner-to-corner
-                height: '30vmax',         // thickness of the diagonal band
+                width: '200vmax',        
+                height: '30vmax',         
                 transform: 'translate(-50%, -50%) rotate(135deg)',
                 transformOrigin: 'center',
                 background: 'linear-gradient(120deg, #0C2F29 0%, #00DF82 25%,#00FFCC 51%, #00DF82 75%, #0C2F29 100%)',

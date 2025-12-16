@@ -26,7 +26,7 @@ export default function UploadRequirments({ onFileSelected }) {
   }
 
   return (
-    <div>
+    <div style={{zIndex:"1"}}>
 
       {/* Színátmenetes keret */}
       <div
@@ -67,7 +67,7 @@ export default function UploadRequirments({ onFileSelected }) {
         style={{ display: 'none' }}
       />
 
-      {fileName && <div style={{ marginTop: 8, color: '#CFC6C6' }}>{fileName}</div>}
+      
       {error && <div style={{ color: '#ff6b6b', marginTop: 6, fontSize: 13 }}>{error}</div>}
     </div>
   )

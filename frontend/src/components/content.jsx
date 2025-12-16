@@ -13,22 +13,17 @@ export default function Content() {
   const [requirementsFile, setRequirementsFile] = useState(null)
   const [resultData, setResultData] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
-  const { setAdatok } = useAdatok()
-  const [viewMode, setViewMode] = useState('pdf') // 'pdf' or 'json'
-  const [heightOption, setHeightOption] = useState('both') // 'both' | 'pdf' | 'json'
+  const { setAdatok, setAppHeight } = useAdatok()
+  const [viewMode, setViewMode] = useState('pdf') // 'pdf' vagy 'json'
+  const [heightOption, setHeightOption] = useState('both') 
 
   const hasPdf = Boolean(selectedFile)
   const hasJson = Boolean(requirementsFile)
-  let containerHeight = '100vh'
-  if (heightOption === 'both') {
-    containerHeight = (hasPdf && hasJson) ? '100%' : '100vh'
-  } else if (heightOption === 'pdf') {
-    containerHeight = hasPdf ? (hasJson ? '100%' : '100vh') : '100vh'
-  } else if (heightOption === 'json') {
-    containerHeight = hasJson ? '100%' : '100vh'
-  }
+  const activeHasFile = viewMode === 'pdf' ? hasPdf : hasJson
+  const containerHeight = activeHasFile ? '100%' : '100vh'
+  
 
-  // Trigger analysis only when both files are present
+  // analizálás elinditása, mikor mind2 fájl fel lett töltve
   useEffect(() => {
     let cancelled = false;
 
@@ -56,7 +51,7 @@ export default function Content() {
 
         setResultData(data);
 
-        // --- Console log
+        
         console.log('--- Analízis eredmények ---');
         console.log('Extracted skills:', data.extracted_skills);
         console.log('Required done:', data.required_done);
@@ -67,10 +62,10 @@ export default function Content() {
         console.log('Category:', data.category);
         console.log('Explanation:', data.explanation);
 
-        // --- Map to context (csak a tényleges teljesített követelmények)
+       
       const score = data.score ?? null;
       const suitability = data.category ?? null;
-      const explanation = data.explanation ?? '';  // ← itt vesszük az indoklást
+      const explanation = data.hr_summary  ?? ''; 
       const completedRequirements = [
         ...(Array.isArray(data.required_done) ? data.required_done : []),
         ...(Array.isArray(data.optional_done) ? data.optional_done : [])
@@ -90,18 +85,23 @@ export default function Content() {
     return () => { cancelled = true; };
   }, [selectedFile, requirementsFile]);
 
+  useEffect(() => {
+    
+    setAppHeight(containerHeight);
+  }, [containerHeight, setAppHeight]);
+
   return (
     <div style={{ height: containerHeight, margin: 'none', padding: 'none', display: 'flex', gap: 24, flexDirection:"column", alignItems:"center", zIndex:"1", position:"relative"}}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center' }}>
         <Header />
-        <div style={{display:"flex",justifyContent:"space-evenly",width:"50vw",margin:"5vh 5vw",alignItems:"center",gap:"10px",color:"#CFC6C6",fontWeight:"600"}}>
+        <div style={{display:"flex",justifyContent:"space-evenly",width:"50vw",margin:"10vh 5vw 1vh 5vw",alignItems:"center",gap:"10px",color:"#CFC6C6",fontWeight:"600"}}>
           <UploadCvButton onFileSelected={setSelectedFile} />
            <span>and</span>
           <UploadRequirments onFileSelected={setRequirementsFile} />
         </div>
 
         {/* Status message */}
-        <div style={{ width: '50vw', marginTop: 0, color: '#CFC6C6', textAlign: 'center', fontSize: 14 }}>
+        <div style={{ width: '50vw', marginTop: 0, color: '#ffffffff', textAlign: 'center', fontSize: 18 }}>
           {!selectedFile && !requirementsFile && <div>Kérlek tölts fel egy CV (PDF) és egy Requirements (JSON) fájlt a folytatáshoz.</div>}
           {selectedFile && !requirementsFile && <div>Várja: Requirements (JSON) fájl feltöltését.</div>}
           {!selectedFile && requirementsFile && <div>Várja: CV (PDF) fájl feltöltését.</div>}
@@ -128,7 +128,8 @@ export default function Content() {
                 color: '#CFC6C6',
                 position: 'relative',
                 padding: '4px',
-                boxShadow:"inset -3px -8px 6px rgba(4, 19, 19, 0.25)"
+                boxShadow:"inset -3px -8px 6px rgba(4, 19, 19, 0.25)",
+                border:"1px solid rgba(102, 102, 102, 1)"
               }}
             >
               <span
@@ -148,7 +149,7 @@ export default function Content() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 2, display:"flex", flexDirection:"column", alignItems:"center", gap:"2vh"}}>
-        {isLoading && <Progress2 />} 
+         {isLoading && <Progress2 />}  
         
       {!isLoading && resultData && <InfoBox result={{
         score: resultData.score,
@@ -157,11 +158,11 @@ export default function Content() {
           ...(Array.isArray(resultData.required_done) ? resultData.required_done : []),
           ...(Array.isArray(resultData.optional_done) ? resultData.optional_done : [])
         ],
-        explanation: resultData.explanation  // ← átadjuk az indoklást
+        explanation: resultData.hr_summary 
       }} />}
 
-        <div style={{borderRadius:"15px",background: "linear-gradient(to bottom, #9C9B9B , #666666 )",padding:"1px", overflow: 'visible'}}>
-          <div style={{background:"#364242",borderRadius:"15px",padding:"0.6vh 0.6vw",boxShadow:"0 4px 30px rgba(0, 0, 0, 0.1)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",display:"flex",justifyContent:"center",alignItems:"center",width:"62vw",maxHeight:"82vh", overflow: 'visible'}}>
+        <div style={{borderRadius:"15px",background: "linear-gradient(to bottom, rgba(156, 155, 155, 1) , rgba(102, 102, 102, 1) )",padding:"1px", overflow: 'visible'}}>
+          <div style={{background:"rgba(54, 66, 66, 1)",borderRadius:"15px",padding:"0.6vh 0.6vw",boxShadow:"0 4px 30px rgba(0, 0, 0, 0.1)",backdropFilter:"blur(40px)",WebkitBackdropFilter:"blur(40px)",display:"flex",justifyContent:"center",alignItems:"center",width:"62vw",maxHeight:"82vh", overflow: 'visible'}}>
             {viewMode === 'pdf' ? (
               <PdfViewer file={selectedFile} />
             ) : (

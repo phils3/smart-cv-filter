@@ -22,14 +22,14 @@ export default function Progress() {
         <div style={{display:"flex",padding:"1vh 2vw",alignItems:"center",gap:"2vw",fontSize:"1rem",position:"relative"}}> 
             {/* fájl "icon */}
             <div style={{width:"5vh",height:"6vh",borderRadius:"3px",background:"#FDF8F8",position:"relative",display:"flex",flexDirection:"column",alignItems:"center"}}>
-                <div style={{width:"3vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"2.6vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"2.1vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"3.2vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"2.6vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"1.6vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"2vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
-                <div style={{width:"3vw",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"50%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"65%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"35%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"55%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"65%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"45%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"40%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
+                <div style={{width:"65%",height:"0.2vh",borderRadius:"2px",background:"#504B4B",margin:"0.5vh 0.5vw 0vh 0.5vw"}}></div>
                                 {/* analyzing scan area */}
                                 <div className="scanContainer" style={{position:'absolute',bottom:0,left:0,right:0,top:0,display:'flex',alignItems:'flex-end',justifyContent:'center'}}>
                                     <div style={{position:'relative',width:'5vh',height:'6vh',overflow:'hidden',borderRadius:3}}>

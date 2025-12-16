@@ -1,5 +1,4 @@
 
-
 body {
   margin: 0;
   display: flex;
@@ -34,4 +33,16 @@ body {
   position: relative;
   z-index: 2;
   transform-origin: center;
+}
+#github_link:hover{
+  color:#32FCC0;
+  cursor:pointer;
+   transition: color 0.2s ease;
+}
+#github_link{
+  color:#32FCC0;
+  cursor:pointer;
+  transition: color 0.2s ease;
+  z-index: 1001;
+  position: relative;
 }

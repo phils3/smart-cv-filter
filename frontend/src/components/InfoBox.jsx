@@ -1,9 +1,20 @@
+import React, { useState, useEffect } from 'react';
 export default function InfoBox({ result }) {
   const score = result?.score ?? '-';
   const category = result?.category ?? '-';
   const completedRequirements = Array.isArray(result?.completedRequirements) ? result.completedRequirements : [];
   const explanation = result?.explanation ?? '';
 
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  
+    useEffect(() => {
+      const handleResize = () => setWindowWidth(window.innerWidth);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
+  
+    // Alapból 35vw, tablet esetén 50vw
+    const explanationWidth = windowWidth <= 1224 ? "60vw" : "60vw";
   return (
     <div style={{display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", marginTop: "1vh"}}>
         <div style={{ width: "63vw", display: "flex", justifyContent: "center", alignItems: "center", color: "#CFC6C6", fontSize: "14px", marginTop: "2vh", textAlign: "center", padding: "0px" }}>
@@ -71,7 +82,7 @@ export default function InfoBox({ result }) {
         </div>
       </div>
       <div style={{
-          width:"35vw",
+          width:explanationWidth,
           height:"100%",
           borderRadius:"10px",
           border:"2px solid #757979",
@@ -87,6 +98,7 @@ export default function InfoBox({ result }) {
           lineHeight: "2rem",
           fontSize: "1.3rem",
           position:"relative",
+          marginTop:"2vh"
         }}>
           <p style={{
             color: "#32FCC0",
@@ -95,7 +107,7 @@ export default function InfoBox({ result }) {
             left:15,
             
           }}>Indoklás:</p>
-          <p style={{marginTop:"3vh"}}>{explanation}</p>
+          <p style={{marginTop:"3vh",fontSize:"1.1rem"}}>{explanation}</p>
         </div>
     </div>
    

@@ -1,18 +1,12 @@
-import json
-from pypdf import PdfReader
-from typing import TypedDict
+import os
+from typing import List
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from dotenv import load_dotenv
-from fastapi import FastAPI, UploadFile, File 
-from fastapi.middleware.cors import CORSMiddleware 
-import inspect
-import os
 
-# ======================================================
-# LLM CONFIG
-# ======================================================
+# SETUP
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
@@ -22,98 +16,97 @@ llm = ChatOpenAI(
     temperature=0
 )
 
-# ======================================================
-# State
-# ======================================================
-
-class CVState(TypedDict, total=False):
-    cv_text: str
-    extracted_skills: list[str]
-    user_required_skills: list[str]
-    user_optional_skills: list[str]
-    match_score: int
-
-# ======================================================
-# 1️ CV PARSER
-# ======================================================
+# 1. SKILL EXTRACTION (STRICT - CODE 1 LOGIC)
 
 cv_parser_prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Te egy CV-parszer vagy. Az alábbi önéletrajz alapján gyűjtsd ki "
-        "a jelölt főbb készségeit és tapasztalatait. "
-        "Sorold fel őket vesszővel elválasztva egyetlen stringben. "
-        "Csak a készségeket és tapasztalatokat add meg."
-    ),
+    ("system", """
+Te egy CV-parszer vagy.
+
+Feladatod:
+- A szövegben EXPLICIT módon szereplő készségeket és tapasztalatokat gyűjtsd ki
+- Csak azt add vissza, ami konkrétan le van írva
+- Ne következtess
+- Ne egészítsd ki
+
+Formátum:
+- vesszővel elválasztott lista
+- csak skill / tapasztalat
+"""),
     ("user", "{cv_text}")
 ])
 
 cv_parser_chain = cv_parser_prompt | llm | StrOutputParser()
 
-async def cv_parser_node(state: CVState) -> CVState:
-    maybe = cv_parser_chain.invoke({"cv_text": state["cv_text"]})
-    response_str = await maybe if inspect.isawaitable(maybe) else maybe
-    extracted = [s.strip() for s in response_str.split(",") if s.strip()]
-    return {"extracted_skills": extracted}
+def extract_skills(cv_text: str) -> List[str]:
+    response = cv_parser_chain.invoke({"cv_text": cv_text})
+    return [s.strip() for s in response.split(",") if s.strip()]
 
-# ======================================================
-# 2️ REQUIRED / OPTIONAL MATCH NODE-OK
-# ======================================================
+# 2. MATCH SKILLS (NO HALLUCINATION - CODE 1 LOGIC)
 
-async def cv_user_required_skills_node(state: CVState, required_skills_list) -> CVState:
+def match_skills(
+    extracted_skills: List[str],
+    target_skills: List[str],
+    mode: str
+) -> List[str]:
+    """
+    mode: 'required' | 'optional'
+    """
+    # Ha üres a target lista, nincs mit vizsgálni
+    if not target_skills:
+        return []
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "Hasonlítsd össze a {cv_text} listát a {required_skills_list} listával. "
-                   "Sorold fel vesszővel elválasztva az egyező vagy hasonló elemeket egyetlen stringben. "
-                   "Csak a készségeket és tapasztalatokat add meg vagy bármely más szakmai tapasztalatot, soft skill-t."
-                   "Ne írj semmilyen magyarázó szöveget, példát, vagy kiegészítést."),
-        ("user", "{cv_text}")
+        ("system", f"""
+Te egy ATS (Applicant Tracking System) vagy.
+
+Szabályok:
+- CSAK az input listában szereplő skillekkel dolgozhatsz
+- NEM következtethetsz
+- NEM feltételezhetsz
+- NEM használhatsz külső tudást
+
+Megengedett:
+- kis/nagybetű eltérés (git == GIT)
+- közismert szinonima (git == version control)
+- magyar / angol megfelelő
+
+TILOS:
+- szakmai háttérből való levezetés
+- "általában együtt jár" logika
+
+Csak azokat add vissza, amelyek EGYÉRTELMŰEN megfeleltethetők.
+
+Ha nincs egyezés, adj vissza üres választ.
+"""),
+        ("user", f"""
+Jelölt skillek:
+{", ".join(extracted_skills)}
+
+{mode.capitalize()} követelmények:
+{", ".join(target_skills)}
+""")
     ])
+
     chain = prompt | llm | StrOutputParser()
-    maybe = chain.invoke({
-        "cv_text": state["cv_text"],
-        "required_skills_list": required_skills_list
-    })
-    response = await maybe if inspect.isawaitable(maybe) else maybe
-    return {"user_required_skills": [s.strip() for s in response.split(",") if s.strip()]}
+    response = chain.invoke({})
 
-async def cv_user_optional_skills_node(state: CVState, optional_skills_list, required_skills_list) -> CVState:
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "Hasonlítsd össze a {cv_text} listát a {optional_skills_list} listával. "
-                   "Sorold fel vesszővel elválasztva az egyező vagy hasonló elemeket egyetlen stringben. "
-                   "Csak a készségeket és tapasztalatokat add meg vagy bármely más szakmai tapasztalatot, soft skill-t."
-                   "Ne írj semmilyen magyarázó szöveget, példát, vagy kiegészítést."),
-        ("user", "{cv_text}")
-    ])
-    chain = prompt | llm | StrOutputParser()
-    maybe = chain.invoke({
-        "cv_text": state["cv_text"],
-        "optional_skills_list": optional_skills_list
-    })
-    response = await maybe if inspect.isawaitable(maybe) else maybe
+    return [s.strip() for s in response.split(",") if s.strip()]
 
-    # lowercase és whitespace normalizálás, duplikációk kiszűrése
-    required_set = set(s.lower().strip() for s in required_skills_list)
-    optional_seen = set()
-    cleaned_optional = []
+# 3. SCORING (CODE 1 LOGIC)
 
-    for s in response.split(","):
-        skill = s.strip()
-        skill_lower = skill.lower()
-        if skill and skill_lower not in required_set and skill_lower not in optional_seen:
-            cleaned_optional.append(skill)
-            optional_seen.add(skill_lower)
+def calculate_score(required_done: List[str], optional_done: List[str], all_required: List[str], all_optional: List[str]) -> int:
+    # Itt paraméterként kapja meg az összes szükséges skill listáját a számításhoz
+    req_len = len(all_required)
+    opt_len = len(all_optional)
 
-    return {"user_optional_skills": cleaned_optional}
-
-
-# ======================================================
-# 3️ SCORE + CATEGORY
-# ======================================================
-
-def calculate_score(required_done, optional_done, required_skills_list, optional_skills_list):
-    req = len(required_done) / len(required_skills_list) * 70 if required_skills_list else 0
-    opt = len(optional_done) / len(optional_skills_list) * 30 if optional_skills_list else 0
-    return round(req + opt)
+    req_score = (len(required_done) / req_len) * 70 if req_len > 0 else 0
+    opt_score = (len(optional_done) / opt_len) * 30 if opt_len > 0 else 0
+    
+    score = round(req_score + opt_score)
+    
+    if score >= 100:
+        return 100
+    return score
 
 def category_router(score: int) -> str:
     if score < 50:
@@ -122,55 +115,32 @@ def category_router(score: int) -> str:
         return "talán"
     return "alkalmas"
 
-# ======================================================
-# 4️ PROGRESS NODE-OK (10/5 formátum)
-# ======================================================
+# 4. HR SUMMARY (CODE 1 LOGIC)
 
-def required_progress_node(required_done, required_skills_list) -> str:
-    return f"{len(required_skills_list)}/{len(required_done)}"
 
-def optional_progress_node(optional_done, optional_skills_list) -> str:
-    return f"{len(optional_skills_list)}/{len(optional_done)}"
+def hr_summary(score: int, required_done: List[str], optional_done: List[str], category: str, all_required: List[str]) -> str:
+    # Kiszámoljuk a hiányzókat itt, dinamikusan
+    required_missing = [s for s in all_required if s not in required_done]
 
-# ======================================================
-# 5️ EXPLANATION NODE (HR indoklás)
-# ======================================================
-
-explanation_prompt = ChatPromptTemplate.from_messages([
-    (
-        "system",
-        "Te egy HR-szakmai indoklást készítesz önéletrajz értékeléshez. "
-        "Írj 2–4 mondatos, tömör, szakmai indoklást arról, "
-        "miért ennyi lett a pontszám és a besorolás."
-    ),
-    (
-        "user",
-        """
-CV-ben talált készségek: {cv_skills}
-Kötelező követelmények teljesítése: {required_progress}
-Opcionális követelmények teljesítése: {optional_progress}
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """
+Te egy HR-barát szakmai összegző vagy, aki elmagyarázza a HR-nek miért ennyi a pontszáma a cv-nek, és a besorolása.
+Ne technikai részletezz, hanem érthetően fogalmazz, röviden tömören.
+"""),
+        ("user", f"""
 Pontszám: {score}
-Besorolás: {category}
-"""
-    )
-])
+Kategória: {category}
 
-explanation_chain = explanation_prompt | llm | StrOutputParser()
+Teljesült kötelező skillek:
+{", ".join(required_done) or "nincs"}
 
-async def explanation_node(
-    cv_skills: list[str],
-    required_progress: str,
-    optional_progress: str,
-    score: int,
-    category: str
-) -> str:
-    maybe = explanation_chain.invoke({
-        "cv_skills": ", ".join(cv_skills),
-        "required_progress": required_progress,
-        "optional_progress": optional_progress,
-        "score": score,
-        "category": category
-    })
-    return await maybe if inspect.isawaitable(maybe) else maybe
+Hiányzó kötelező skillek:
+{", ".join(required_missing)}
 
+Teljesült opcionális skillek:
+{", ".join(optional_done) or "nincs"}
+""")
+    ])
 
+    chain = prompt | llm | StrOutputParser()
+    return chain.invoke({})
