@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-@app.post("/analyze-cv")
+@app.post("/api/cv_analyzing")
 async def analyze_cv_endpoint(
     cv_file: UploadFile = File(...),
     skills_file: UploadFile = File(...)
