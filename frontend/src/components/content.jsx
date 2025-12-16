@@ -39,7 +39,7 @@ export default function Content() {
         formData.append('cv_file', selectedFile);
         formData.append('skills_file', requirementsFile);
 
-        const res = await fetch('http://127.0.0.1:8000/analyze-cv', {
+        const res = await fetch('/api/cv_analyzing', {
           method: 'POST',
           body: formData
         });
