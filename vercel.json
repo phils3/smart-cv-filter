@@ -1,7 +1,7 @@
 {
   "functions": {
     "api/cv_analyzing.py": {
-      "runtime": "@vercel/python",
+      "runtime": "python@3.9",
       "memory": 1024,
       "maxDuration": 30
     }
